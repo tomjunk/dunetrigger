@@ -57,9 +57,17 @@ physics:
          daq_tag: "trigrawdecoder:daq"
          verbosity: 0
      }
+
+     TriggerAnaTreeDefaults:
+     {
+         module_type: "TriggerAnaTree"
+         dump_tp: true
+         dump_ta: true
+	 dump_tc: true
+     }
  }
 
- ana:       [ offlineTriggerTPCInfoDisplay, onlineTriggerTPCInfoDisplay, triggerTPCInfoComparator ]
+ ana:       [ offlineTriggerTPCInfoDisplay, onlineTriggerTPCInfoDisplay, triggerTPCInfoComparator, TriggerAnaTreeDefaults ]
 
  stream1:   [ out1 ]
 
