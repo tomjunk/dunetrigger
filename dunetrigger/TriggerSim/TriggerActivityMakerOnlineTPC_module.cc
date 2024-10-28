@@ -16,7 +16,7 @@
 #include "canvas/Persistency/Common/PtrVector.h"
 #include "canvas/Utilities/InputTag.h"
 #include "fhiclcpp/ParameterSet.h"
-#include "larcore/Geometry/Geometry.h"
+#include "larcore/Geometry/WireReadout.h"
 #include "larcoreobj/SimpleTypesAndConstants/readout_types.h"
 #include "messagefacility/MessageLogger/MessageLogger.h"
 
@@ -45,9 +45,9 @@ namespace duneana {
     return (os << scope.first << " P:" << scope.second);
   }
 
-  static TAMakerScopeID_t getTAScopeID(readout::ROPID &ropid, geo::Geometry &geom) {
+  static TAMakerScopeID_t getTAScopeID(readout::ROPID &ropid, geo::WireReadoutGeom const &geom) {
     TAMakerScopeID_t result = {
-      ropid.asConstTPCsetID(), // APA is a TPCSet
+      ropid.asTPCsetID(), // APA is a TPCSet
       geom.View(ropid)
     };
     return result;
@@ -179,7 +179,7 @@ void duneana::TriggerActivityMakerOnlineTPC::produce(art::Event &e) {
   using dunedaq::trgdataformats::TriggerPrimitive;
 
   // get a service handle for geometry
-  art::ServiceHandle<geo::Geometry> geom;
+  geo::WireReadoutGeom const* geom = &art::ServiceHandle<geo::WireReadout>()->Get();
 
   // unique ptrs to vectors for associations
   auto ta_vec_ptr = std::make_unique<std::vector<TriggerActivityData>>();
