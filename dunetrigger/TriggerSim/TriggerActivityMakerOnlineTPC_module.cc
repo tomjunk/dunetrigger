@@ -144,7 +144,7 @@ duneana::TriggerActivityMakerOnlineTPC::TriggerActivityMakerOnlineTPC(
   algconfig_plane0(p.get<fhicl::ParameterSet>("algconfig_plane0")),
   algconfig_plane1(p.get<fhicl::ParameterSet>("algconfig_plane1")),
   algconfig_plane2(p.get<fhicl::ParameterSet>("algconfig_plane2")),
-  algconfig_plane3(p.get<fhicl::ParameterSet>("algconfig_plane3")),
+  algconfig_plane3(p.get<fhicl::ParameterSet>("algconfig_plane3", {})),
   tp_tag(p.get<art::InputTag>("tp_tag")),
   channel_mask(p.get<std::vector<raw::ChannelID_t>>("channel_mask", std::vector<raw::ChannelID_t>{})),
   verbosity(p.get<int>("verbosity", 1)),
