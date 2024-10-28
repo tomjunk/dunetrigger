@@ -221,7 +221,7 @@ To compare offline and online trigger information, use the `run_triggerTPCInfoCo
 To execute the configuration file `run_triggerTPCInfoComparator.fcl`, one can utilize the following art instruction:
 
 ```shell
-lar -c srcs/dunetrigger/example/run_triggerTPCInfoComparator.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${TRIGGER_COMPARATOR_FILE_PATH} -T ${TRIGGER_COMPARATOR_HIST_PATH}
+lar -c dunetrigger/TriggerAna/run_triggerTPCInfoComparator.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${TRIGGER_COMPARATOR_FILE_PATH} -T ${TRIGGER_COMPARATOR_HIST_PATH}
 ```
 
 In this instruction, `${N_EVENTS}` specifies the number of events to process. `${TRIGGER_FILE_PATH}` denotes the location of the trigger data file, while `${TRIGGER_COMPARATOR_FILE_PATH}` points to the output art ROOT data file location. `${TRIGGER_COMPARATOR_HIST_PATH}` indicates the location for the output histogram ROOT file.
@@ -245,7 +245,7 @@ To analyze trigger data from simulated detector signals, use the `run_offlineTri
 To execute the analysis, one can use the following command:
 
 ```bash
-lar -c srcs/dunetrigger/example/run_offlineTriggerTPCInfoDisplay.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${ANALYSIS_FILE_PATH} -T ${ANALYSIS_HIST_PATH}
+lar -c dunetrigger/TriggerAna/run_offlineTriggerTPCInfoDisplay.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${ANALYSIS_FILE_PATH} -T ${ANALYSIS_HIST_PATH}
 ```
 
 In this command, `${N_EVENTS}` is the number of events to be processed, `${TRIGGER_FILE_PATH}` is the path to the trigger data file, `${ANALYSIS_FILE_PATH}` is the path for the output art ROOT data file, and `${ANALYSIS_HIST_PATH}` is the path for the output histogram ROOT file.
