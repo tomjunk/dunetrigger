@@ -35,6 +35,7 @@ physics:
          rawdigit_tag: "tpcrawdecoder:daq"
          tpalg: {
              tool_type: TPAlgTPCSimpleThreshold
+	     # if threshold is set to -1, the plane is not used for TP generation
              threshold_tpg_plane0: -1
              threshold_tpg_plane1: -1
              threshold_tpg_plane2: 60
@@ -48,10 +49,10 @@ physics:
          module_type: TriggerActivityMakerTPC
          tp_tag: "tpmakerTPC"
          taalg: {
-	     tool_type: TAAlgTPCADCSimpleWindow 
-	     adc_threshold: 20000000
-	     window_length: 60000
-	     verbosity: 2
+	      tool_type: TAAlgTPCADCSimpleWindow 
+	      adc_threshold: 20000000
+	      window_length: 60000
+	      verbosity: 2
          }
          nmodules: 4
          mergecollwires: true
@@ -91,4 +92,3 @@ outputs:
    saveMemoryObjectThreshold: 0
  }
 }
-
