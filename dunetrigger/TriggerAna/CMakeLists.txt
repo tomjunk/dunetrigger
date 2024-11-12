@@ -1,7 +1,3 @@
-add_subdirectory(TPAlgTools)
-add_subdirectory(TAAlgTools)
-add_subdirectory(TCAlgTools)
-
 art_make( BASENAME_ONLY MODULE_LIBRARIES
   lardataobj::RawData
   dunecore::DuneObj
@@ -21,6 +17,7 @@ art_make( BASENAME_ONLY MODULE_LIBRARIES
   ROOT_BASIC_LIB_LIST
   triggeralgs_module
 )
+
 
 install_fhicl()
 install_headers()

@@ -2,7 +2,7 @@
 #include "protodune_tools_dune.fcl"
 #include "tools_dune.fcl"
 
-process_name: RunTP
+process_name: RunTA
 
 services:
 {
@@ -24,6 +24,16 @@ source:
   saveMemoryObjectThreshold: 0
 }
 
+algconfig_ta:
+{
+	window_length: 60000
+	adc_threshold: 20000000
+}
+
+algconfig_tc:
+{
+}
+
 physics:
 {
 
@@ -34,30 +44,40 @@ physics:
          module_type: TriggerPrimitiveMakerTPC
          rawdigit_tag: "tpcrawdecoder:daq"
          tpalg: {
-             tool_type: TPAlgTPCExample
-             verbosity: 1
+	     threshold_tpg_plane0: -1
+	     threshold_tpg_plane1: -1
+	     threshold_tpg_plane2: 60
+             tool_type: TPAlgTPCSimpleThreshold
+             verbosity: 0
          }
          verbosity: 1
      }
 
      tamakerTPC:
      {
-         module_type: TriggerActivityMakerTPC
+         module_type: TriggerActivityMakerOnlineTPC
          tp_tag: "tpmakerTPC"
-         taalg: {
-             tool_type: TAAlgTPCExample
-             multiplicity: 100
-             verbosity: 1
-         }
+	 algorithm: "TriggerActivityMakerADCSimpleWindowPlugin"
+         algconfig_plane0: @local::algconfig_ta 
+         algconfig_plane1: @local::algconfig_ta
+         algconfig_plane2: @local::algconfig_ta
+         algconfig_plane3: @local::algconfig_ta
          verbosity: 1
      }
 
+     tcmakerTPC:
+     {
+         module_type: TriggerCandidateMakerOnlineTPC
+         ta_tag: "tamakerTPC"
+         algorithm: "TriggerCandidateMakerADCSimpleWindowPlugin"
+         algconfig: @local::algconfig_tc
+         verbosity: 1
+     }
  }
 
 
-
  stream1:  [ out1 ]
- reco: [ tpmakerTPC, tamakerTPC ]
+ reco: [ tpmakerTPC, tamakerTPC, tcmakerTPC ]
  trigger_paths: [ reco ]
 
  end_paths:     [stream1]
@@ -68,7 +88,7 @@ outputs:
  out1:
  {
    module_type: RootOutput
-   fileName:    "tp_output.root"
+   fileName:    "tc_output.root"
    compressionLevel: 1
    saveMemoryObjectThreshold: 0
  }

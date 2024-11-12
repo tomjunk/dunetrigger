@@ -2,7 +2,7 @@
 #include "protodune_tools_dune.fcl"
 #include "tools_dune.fcl"
 
-process_name: RunTP
+process_name: RunTA
 
 services:
 {
@@ -24,6 +24,23 @@ source:
   saveMemoryObjectThreshold: 0
 }
 
+algconfig_ta:
+{
+	window_length: 60000
+	adjacency_threshold: 480
+	adj_tolerance: 5
+	prescale: 1
+        print_tp_info: false
+}
+
+algconfig_tc:
+{
+	adc_threshold: 1000
+	n_channels_threshold: 210
+	trigger_on_adc: true
+	trigger_on_n_channels: false
+}
+
 physics:
 {
 
@@ -34,41 +51,36 @@ physics:
          module_type: TriggerPrimitiveMakerTPC
          rawdigit_tag: "tpcrawdecoder:daq"
          tpalg: {
+	     threshold_tpg_plane0: -1
+	     threshold_tpg_plane1: -1
+	     threshold_tpg_plane2: 60
              tool_type: TPAlgTPCSimpleThreshold
-             threshold_tpg_plane0: 250
-             threshold_tpg_plane1: 250
-             threshold_tpg_plane2: 250
-             verbosity: 1
+             verbosity: 0
          }
          verbosity: 1
      }
 
      tamakerTPC:
      {
-         module_type: TriggerActivityMakerTPC
+         module_type: TriggerActivityMakerOnlineTPC
          tp_tag: "tpmakerTPC"
-         taalg: {
-             tool_type: TAAlgTPCExample
-             multiplicity: 100
-             verbosity: 1
-         }
+	 algorithm: "TriggerActivityMakerChannelAdjacencyPlugin"
+         algconfig_plane0: @local::algconfig_ta 
+         algconfig_plane1: @local::algconfig_ta
+         algconfig_plane2: @local::algconfig_ta
+         algconfig_plane3: @local::algconfig_ta
          verbosity: 1
      }
 
      tcmakerTPC:
      {
-         module_type: TriggerCandidateMakerTPC
+         module_type: TriggerCandidateMakerOnlineTPC
          ta_tag: "tamakerTPC"
-         tcalg: {
-             tool_type: TCAlgTPCExample
-             multiplicity: 1
-             verbosity: 1
-         }
+         algorithm: "TriggerCandidateMakerChannelAdjacencyPlugin"
+         algconfig: @local::algconfig_tc
          verbosity: 1
      }
-
  }
-
 
 
  stream1:  [ out1 ]

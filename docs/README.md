@@ -1,6 +1,6 @@
 # dunetrigger
 
-Tools for emulating dunedaq trigger flow and analyzing trigger information in the DUNE experiment within the LArSoft framework. It's noteworthy that the LArSoft trigger emulation software is still under development and the commands presented here are subject to changes.
+Tools for emulating dunedaq trigger flow and analyzing trigger information in the DUNE experiment within the LArSoft framework.
 
 ## Apptainer container
 
@@ -19,7 +19,7 @@ The bash snippet below creates and sets up the development environment for the L
 It is worth noting that the username must be adapted to the user running the script. Regarding the software version, it is set to `v09_91_04d00`, but it can be changed to any other future version available in the DUNE software environment. The same applies to the qualifiers, which are set to `e26:prof` in this case.
 
 ```bash
-# This script sets up the development environment for the LArSoft trigger emulation software used in the DUNE experiment.
+#This script sets up the development environment for the LArSoft trigger emulation software used in the DUNE experiment.
 # It creates a working directory, sets up the required software packages, and clones the necessary repositories.
 # Finally, it builds and installs the software.
 
@@ -46,14 +46,26 @@ cd ${DIRECTORY}
 mrb newDev -v ${VERSION} -q ${QUALS}
 source ${WORKDIR}/${DIRECTORY}/localProducts*/setup
 
-# Clone the dunetrigger repository
-mrb g https://github.com/wesketchum/dunetrigger.git@develop
+# Clone the dunetrigger repository and DUNE-DAQ/triggeralgs submodule (https://github.com/DUNE-DAQ/triggeralgs/tree/production/v4)
+mrb g https://github.com/wesketchum/dunetrigger.git
+cd srcs/dunetrigger
+git checkout schhibra/daq_triggeralgs
+git submodule init
+git submodule update
+
+# Make the required changes in triggeralgs directory
+bash create_cmakelists.sh
+bash replace_triggeralgs.sh
+cd ${WORKDIR}/${DIRECTORY}
 
 # Clone the duneprototypes repository
 # Temporary until the RDTimestamp fix is merged into develop
-mrb g https://github.com/wesketchum/duneprototypes.git@feature/wketchum_FixRawDigitRDTimestamps
+mrb g https://github.com/wesketchum/duneprototypes.git
+git checkout feature/wketchum_FixRawDigitRDTimestamps
 
 cd ${MRB_BUILDDIR}
+
+mrbslp
 
 # Set up the environment for building and installing the software
 # In gpvm machines, use -j3 to avoid memory issues, since dune gpvms have 4 cores only. Build virtual machines are not available with the Apptainer container. In another virtual machine we use half of the cores available to build the software on stronger machines.
@@ -77,7 +89,7 @@ mrbslp
 
 ## Source the local products after creating the development area
 
-Once the development area was created, the environment can be set up by running the following commands within a bash script:
+Once the development area is created, the environment can be set up by running the following commands within a bash script:
 
 ```bash
 # This script sets up the environment for the DUNE software and runs the necessary commands to source the local products after creating the development area.
@@ -128,87 +140,80 @@ The configuration file `run_pdhd_tpc_decoder.fcl` can be found in the `/srcs/dun
 
 In case one desires to use a raw data file for tests, one can find an example raw data file in the `/pnfs/dune/persistent/users/hamza/trigger_sim_testing` directory.
 
-For the example raw data file, assuming that the working directory is `/srcs/dunetrigger/example`, the command would be:
+For the example raw data file, the command would be:
 
 ```bash
-lar -c run_pdhd_tpc_decoder.fcl -n -1 -s /pnfs/dune/persistent/users/hamza/trigger_sim_testing/np04hd_raw_run026305_0033_dataflow0_datawriter_0_20240520T133910.hdf5
+lar -c srcs/dunetrigger/example/run_pdhd_tpc_decoder.fcl -n -1 -s /pnfs/dune/persistent/users/hamza/trigger_sim_testing/np04hd_raw_run026305_0033_dataflow0_datawriter_0_20240520T133910.hdf5
 ```
 
-The `-1` flag indicates that all events in the file will be processed. Since `-o` and `-T` flags were not utilized, the output files will be saved in the working directory, having names defined, by default, in the fhicl file.
+The `-1` flag indicates that all events in the file will be processed. The decoded file `np04hd_raw_run026305_0033_dataflow0_datawriter_0_20240520T133910_decode.root` is created.
 
 ### How to run the LArSoft trigger emulation
 
 The following command shows how to run the LArSoft trigger emulation software for the decoded file, which contains the raw waveforms needed for TPG finding.
 
 ```bash
-lar -c run_tpalg_taalg_tcalg.fcl -n ${N_EVENTS} -s ${DECODED_FILE_PATH} -o ${TRIGGER_FILE_PATH} -T ${TRIGGER_HIST_PATH}
+lar -c srcs/dunetrigger/example/run_tpalg_taalg_tcalg_online_ADCSimpleWindow.fcl -n ${N_EVENTS} -s ${DECODED_FILE_PATH} -o ${TRIGGER_FILE_PATH} -T ${TRIGGER_HIST_PATH}
 ```
 
-In this command, `${N_EVENTS}` represents the number of events to be processed. `${DECODED_FILE_PATH}` corresponds to the path of the decoded art ROOT file. `${TRIGGER_FILE_PATH}` denotes the path for the output art ROOT data file. Lastly, `${TRIGGER_HIST_PATH}` indicates the path for the output histogram ROOT file. The configuration file `run_tpalg_taalg_tcalg.fcl` can be located in the `/srcs/dunetrigger/example` directory of the dunetrigger repository.
+In this command, `${N_EVENTS}` represents the number of events to be processed. `${DECODED_FILE_PATH}` corresponds to the path of the decoded art ROOT file. `${TRIGGER_FILE_PATH}` denotes the path for the output art ROOT data file. Lastly, `${TRIGGER_HIST_PATH}` indicates the path for the output histogram ROOT file.
 
-One has to modify the `run_tpalg_taalg_tcalg.fcl` file to set the desired trigger algorithms and/or parameters for the trigger emulation. By default, the fhicl file is set to use the `TXAlgTPCExample` algorithms.
+`run_tpalg_taalg_tcalg_online_ADCSimpleWindow.fcl` runs SimpleThreshold algorithm (in `/srcs/dunetrigger/TPAlgTools/`) for TP generation, ADCSimpleWindow algorithm (in `srcs/dunetrigger/dunetrigger/triggeralgs/src`) for TA and TC generation:
 
 ```c++
-producers:
+algconfig_ta:
+{
+	window_length: 60000
+	adc_threshold: 20000000
+}
+
+algconfig_tc:
+{
+}
+
+physics:
+{
+
+ producers:
  {
      tpmakerTPC:
      {
          module_type: TriggerPrimitiveMakerTPC
          rawdigit_tag: "tpcrawdecoder:daq"
          tpalg: {
-             tool_type: TPAlgTPCExample
-             verbosity: 1
+	      threshold_tpg_plane0: -1
+	           threshold_tpg_plane1: -1
+		        threshold_tpg_plane2: 60
+             tool_type: TPAlgTPCSimpleThreshold
+             verbosity: 0
          }
          verbosity: 1
      }
 
      tamakerTPC:
      {
-         module_type: TriggerActivityMakerTPC
+         module_type: TriggerActivityMakerOnlineTPC
          tp_tag: "tpmakerTPC"
-         taalg: {
-             tool_type: TAAlgTPCExample
-             multiplicity: 100
-             verbosity: 1
-         }
+	  algorithm: "TriggerActivityMakerADCSimpleWindowPlugin"
+         algconfig_plane0: @local::algconfig_ta 
+         algconfig_plane1: @local::algconfig_ta
+         algconfig_plane2: @local::algconfig_ta
+         algconfig_plane3: @local::algconfig_ta
          verbosity: 1
      }
 
      tcmakerTPC:
      {
-         module_type: TriggerCandidateMakerTPC
+         module_type: TriggerCandidateMakerOnlineTPC
          ta_tag: "tamakerTPC"
-         tcalg: {
-             tool_type: TCAlgTPCExample
-             multiplicity: 1
-             verbosity: 1
-         }
+         algorithm: "TriggerCandidateMakerADCSimpleWindowPlugin"
+         algconfig: @local::algconfig_tc
          verbosity: 1
      }
-
  }
+}
  ```
-
-At present, there is a more sophisticated algorithm for trigger primitive generation available, called `TPAlgTPCSimpleThreshold`. It emulates the trigger primitive generator used for data taking during NP-04 tests and runs in 2024. This one should be implemented in the fhicl file as follows:
-
-```c++
-tpmakerTPC:
-     {
-         module_type: TriggerPrimitiveMakerTPC
-         rawdigit_tag: "tpcrawdecoder:daq"
-         tpalg: {
-             tool_type: TPAlgTPCSimpleThreshold
-             threshold_tpg_plane0: 500
-             threshold_tpg_plane1: 500
-             threshold_tpg_plane2: 500
-             verbosity: 0
-         }
-         verbosity: 1
-     }
-```
-
-One may notice that there is no actual *Trigger Activity/Candidate Maker* included in the LArSoft trigger emulation software. The `TAAlgTPCExample` and `TCAlgTPCExample` placeholders are used to exemplify the implementation of these algorithms. The user can implement their own algorithms for these modules.
-
+Similarly, the `run_tpalg_taalg_tcalg_online_ChannelAdjacency.fcl` file uses ChannelAdjacency algorithm for TA and TC generation.
 ### How to compare the trigger data
 
 To compare offline and online trigger information, use the `run_triggerTPCInfoComparator.fcl` configuration file. This analysis helps identify any differences between the trigger data generated by the trigger emulation software and the trigger information saved in the *Trigger Records*. It provides histograms that highlight the similarities and discrepancies between offline and online trigger information. This analysis validates the correctness and consistency of the trigger algorithms in LArSoft, ensuring accurate event selection for simulated events.
@@ -216,31 +221,31 @@ To compare offline and online trigger information, use the `run_triggerTPCInfoCo
 To execute the configuration file `run_triggerTPCInfoComparator.fcl`, one can utilize the following art instruction:
 
 ```shell
-lar -c run_triggerTPCInfoComparator.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${TRIGGER_COMPARATOR_FILE_PATH} -T ${TRIGGER_COMPARATOR_HIST_PATH}
+lar -c srcs/dunetrigger/TriggerAna/run_triggerTPCInfoComparator.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${TRIGGER_COMPARATOR_FILE_PATH} -T ${TRIGGER_COMPARATOR_HIST_PATH}
 ```
 
-In this instruction, `${N_EVENTS}` specifies the number of events to process. `${TRIGGER_FILE_PATH}` denotes the location of the trigger data file, while `${TRIGGER_COMPARATOR_FILE_PATH}` points to the output art ROOT data file location. `${TRIGGER_COMPARATOR_HIST_PATH}` indicates the location for the output histogram ROOT file. The `run_triggerTPCInfoComparator.fcl` configuration file can be found in the `/srcs/dunetrigger/example` directory within the dunetrigger repository.
+In this instruction, `${N_EVENTS}` specifies the number of events to process. `${TRIGGER_FILE_PATH}` denotes the location of the trigger data file, while `${TRIGGER_COMPARATOR_FILE_PATH}` points to the output art ROOT data file location. `${TRIGGER_COMPARATOR_HIST_PATH}` indicates the location for the output histogram ROOT file.
 
 ## Generate trigger information from simulated data with LArSoft
 
-Using the art ROOT file generated at the `detsim` level, one can generate trigger information by means of the LArSoft trigger emulation software. It allows for the emulatation of the trigger flow and the analysis of the trigger information in the DUNE experiment within the LArSoft framework. This is of utmost importance when analyzing signals from simulated data to tune up algorithm parameters, or even improving and validating the trigger algorithms.
+Using the art ROOT file generated at the `detsim` level, one can generate trigger information by means of the LArSoft trigger emulation software. It allows for the emulation of the trigger flow and the analysis of the trigger information in the DUNE experiment within the LArSoft framework. This is of utmost importance when analyzing signals from simulated data to tune up algorithm parameters, or even improving and validating the trigger algorithms.
 
 ### LArSoft trigger emulation from simulated data
 
-To perform the LArSoft trigger emulation, just execute the `run_tpalg_taalg_tcalg.fcl` file as in the previous [section](#how-to-run-the-larsoft-trigger-emulation) for the decoded art ROOT file. Keep in mind that the input file, `${DETSIM_FILE_PATH}`,  is the art ROOT file generated at the `detsim` level.
+To perform the LArSoft trigger emulation, just execute the `run_tpalg_taalg_tcalg_online_ADCSimpleWindow.fcl` file as in the previous [section](#how-to-run-the-larsoft-trigger-emulation) for the decoded art ROOT file. Keep in mind that the input file, `${DETSIM_FILE_PATH}`,  is the art ROOT file generated at the `detsim` level.
 
 ```bash
-lar -c run_tpalg_taalg_tcalg.fcl -n ${N_EVENTS} -s ${DETSIM_FILE_PATH} -o ${TRIGGER_FILE_PATH} -T ${TRIGGER_HIST_PATH}
+lar -c srcs/dunetrigger/example/run_tpalg_taalg_tcalg_online_ADCSimpleWindow.fcl -n ${N_EVENTS} -s ${DETSIM_FILE_PATH} -o ${TRIGGER_FILE_PATH} -T ${TRIGGER_HIST_PATH}
 ```
 
 ### How to analyze the trigger data
 
-To analyze trigger data from simulated detector signals, use the `run_offlineTriggerTPCInfoDisplay.fcl` configuration file. This analysis provides insights into the accuracy and consistency of trigger information generated by the trigger emulation software. It is suitable not only to test new algorithms, but also to fine-tune algorithm parameters, allowing for proper event selections. It includes histograms highlighting trigger primitives (TPs), trigger activities (TAs), and trigger candidates (TCs). By examining these outputs, one can understand the performance and behavior of trigger algorithms and ensure the reliability of the trigger emulation system.
+To analyze trigger data from simulated detector signals, use the `run_offlineTriggerTPCInfoDisplay.fcl` configuration file. This analysis provides insights into the accuracy and consistency of trigger information generated by the trigger emulation software. It is suitable not only to test new algorithms, but also to fine-tune algorithm parameters, allowing for proper event selections. It includes histograms highlighting trigger primitives (TPs), trigger activities (TAs), and trigger candidates (TCs). By examining these outputs, one can understand the performance and behaviour of trigger algorithms and ensure the reliability of the trigger emulation system.
 
 To execute the analysis, one can use the following command:
 
 ```bash
-lar -c run_offlineTriggerTPCInfoDisplay.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${ANALYSIS_FILE_PATH} -T ${ANALYSIS_HIST_PATH}
+lar -c srcs/dunetrigger/TriggerAna/run_offlineTriggerTPCInfoDisplay.fcl -n ${N_EVENTS} -s ${TRIGGER_FILE_PATH} -o ${ANALYSIS_FILE_PATH} -T ${ANALYSIS_HIST_PATH}
 ```
 
-In this command, `${N_EVENTS}` is the number of events to be processed, `${TRIGGER_FILE_PATH}` is the path to the trigger data file, `${ANALYSIS_FILE_PATH}` is the path for the output art ROOT data file, and `${ANALYSIS_HIST_PATH}` is the path for the output histogram ROOT file. The configuration file `run_offlineTriggerTPCInfoDisplay.fcl` can be found in the `/srcs/dunetrigger/example` directory of the dunetrigger repository.
+In this command, `${N_EVENTS}` is the number of events to be processed, `${TRIGGER_FILE_PATH}` is the path to the trigger data file, `${ANALYSIS_FILE_PATH}` is the path for the output art ROOT data file, and `${ANALYSIS_HIST_PATH}` is the path for the output histogram ROOT file.
